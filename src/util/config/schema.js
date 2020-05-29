@@ -23,6 +23,7 @@ const botSchema = Joi.object({
   ownerIDs: Joi.array().items(Joi.string().strict()).default([]),
   menuColor: Joi.number().strict().greater(0).default(5285609),
   deleteMenus: Joi.bool().strict().default(true),
+  runSchedulesOnStart: Joi.bool().strict().default(true),
   exitOnSocketIssues: Joi.bool().strict().default(true)
 })
 
@@ -35,6 +36,7 @@ const databaseSchema = Joi.object({
 
 const feedsSchema = Joi.object({
   refreshRateMinutes: Joi.number().strict().greater(0).default(10),
+  articleRateLimit: Joi.number().strict().greater(-1).default(0),
   timezone: timezoneValidator.config().timezone(),
   dateFormat: Joi.string().strict().default('ddd, D MMMM YYYY, h:mm A z'),
   dateLanguage: Joi.string().strict().default('en'),

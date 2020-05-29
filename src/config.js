@@ -39,7 +39,8 @@ exports.set = (override) => {
   bot.streamActivityURL = process.env.DRSS_BOT_STREAMACTIVITYURL || botOverride.streamActivityURL || bot.streamActivityURL
   bot.ownerIDs = envArray('DRSS_BOT_OWNERIDS') || botOverride.ownerIDs || bot.ownerIDs
   bot.menuColor = Number(process.env.DRSS_BOT_MENUCOLOR) || botOverride.menuColor || bot.menuColor
-  bot.deleteMenus = Boolean(process.env.DRSS_BOT_DELETEMENUS) || botOverride.deleteMenus || bot.deleteMenus
+  bot.deleteMenus = Boolean(process.env.DRSS_BOT_DELETEMENUS) || botOverride.deleteMenus === undefined ? bot.deleteMenus : botOverride.deleteMenus
+  bot.runSchedulesOnStart = Boolean(process.env.RUNSCHEDULESONSTART) || botOverride.runSchedulesOnStart === undefined ? bot.runSchedulesOnStart : botOverride.runSchedulesOnStart
   bot.exitOnSocketIssues = Boolean(process.env.DRSS_EXITONSOCKETISSUES) || botOverride.exitOnSocketIssues || bot.exitOnSocketIssues
 
   // DATABASE
@@ -60,6 +61,7 @@ exports.set = (override) => {
   const feeds = config.feeds
   const feedsOverride = override.feeds
   feeds.refreshRateMinutes = Number(process.env.DRSS_FEEDS_REFRESHRATEMINUTES) || feedsOverride.refreshRateMinutes || feeds.refreshRateMinutes
+  feeds.articleRateLimit = Number(process.env.DRSS_FEEDS_ARTICLERATELIMIT) || feedsOverride.articleRateLimit || feeds.articleRateLimit
   feeds.timezone = process.env.DRSS_FEEDS_TIMEZONE || feedsOverride.timezone || feeds.timezone
   feeds.dateFormat = process.env.DRSS_FEEDS_DATEFORMAT || feedsOverride.dateFormat || feeds.dateFormat
   feeds.dateLanguage = process.env.DRSS_FEEDS_DATELANGUAGE || feedsOverride.dateLanguage || feeds.dateLanguage
