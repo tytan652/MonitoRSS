@@ -1,8 +1,7 @@
-process.env.TEST_ENV = true
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const KeyValue = require('../../../structs/db/KeyValue.js')
 const initialize = require('../../../initialization/index.js')
-const dbName = 'test_int_keyvalue'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -19,13 +18,16 @@ jest.mock('../../../config.js', () => ({
 }))
 
 describe('Int::structs/db/KeyValue Database', function () {
+  let server
   /** @type {import('mongoose').Connection} */
   let con
   /** @type {import('mongoose').Collection} */
   let collection
   let collectionName
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
     collectionName = KeyValue.Model.collection.collectionName
     collection = con.db.collection(collectionName)
@@ -75,7 +77,7 @@ describe('Int::structs/db/KeyValue Database', function () {
     }
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

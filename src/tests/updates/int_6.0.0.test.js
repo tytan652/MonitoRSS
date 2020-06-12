@@ -1,9 +1,8 @@
-process.env.TEST_ENV = true
 const config = require('../../config.js')
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const initialize = require('../../initialization/index.js')
 const { updateProfiles, updateFailRecords } = require('../../../scripts/updates/6.0.0.js')
-const dbName = 'test_int_v6_migrate'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -35,10 +34,12 @@ function getOldDate (hoursAgo) {
 }
 
 describe('Int::scripts/updates/6.0.0 Database', function () {
+  let server
   /** @type {import('mongoose').Connection} */
   let con
-  const uri = `mongodb://localhost/${dbName}`
   beforeAll(async function () {
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
     process.env.DRSS_DATABASE_URI = uri
     con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
@@ -373,7 +374,7 @@ describe('Int::scripts/updates/6.0.0 Database', function () {
     })
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

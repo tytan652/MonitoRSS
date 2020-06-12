@@ -1,9 +1,8 @@
-process.env.TEST_ENV = true
 const config = require('../../../config.js')
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const FailRecord = require('../../../structs/db/FailRecord.js')
 const initialize = require('../../../initialization/index.js')
-const dbName = 'test_int_failcounter'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -32,15 +31,20 @@ const oldDate = getOldDate(config.get().feeds.hoursUntilFail + 2)
 const recentDate = getOldDate(config.get().feeds.hoursUntilFail - 1)
 
 describe('Int::structs/db/FailRecord Database', function () {
+  let server
   /** @type {import('mongoose').Connection} */
   let con
   /** @type {import('mongoose').Collection} */
   let collection
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
-    await con.db.dropDatabase()
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
     collection = con.db.collection('fail_records')
+  })
+  beforeEach(async function () {
+    await con.db.dropDatabase()
   })
   describe('static record', function () {
     it('creates the doc if url is new', async function () {
@@ -122,9 +126,8 @@ describe('Int::structs/db/FailRecord Database', function () {
         .resolves.toEqual(false)
     })
   })
-
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

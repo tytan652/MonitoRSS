@@ -1,8 +1,7 @@
-process.env.TEST_ENV = true
 const Subscriber = require('../../../structs/db/Subscriber.js')
 const initialize = require('../../../initialization/index.js')
 const mongoose = require('mongoose')
-const dbName = 'test_int_subscriber'
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -18,10 +17,13 @@ jest.mock('../../../config.js', () => ({
 }))
 
 describe('Int::structs/db/subscriber Database', function () {
+  let server
   /** @type {import('mongoose').Connection} */
   let con
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
   })
   beforeEach(async function () {
@@ -50,7 +52,7 @@ describe('Int::structs/db/subscriber Database', function () {
     expect(JSON.parse(JSON.stringify(found))).toEqual(expect.objectContaining(subData))
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

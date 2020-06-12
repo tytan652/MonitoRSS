@@ -1,4 +1,3 @@
-process.env.TEST_ENV = true
 const config = require('../../../config.js')
 const fs = require('fs')
 const path = require('path')
@@ -22,7 +21,8 @@ jest.mock('../../../config.js', () => ({
 describe('Int::structs/db/Base Databaseless', function () {
   let folderPath = ''
   beforeAll(async function () {
-    folderPath = path.join(config.get().database.uri, Foobar.collection.collectionName)
+    Foobar.setup(require('mongoose'))
+    folderPath = path.join(config.get().database.uri, Foobar.Model.collection.collectionName)
   })
   it('saves', async function () {
     const data = { foo: 'zz', baz: 99 }

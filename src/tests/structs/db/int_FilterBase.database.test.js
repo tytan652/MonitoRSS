@@ -1,8 +1,7 @@
-process.env.TEST_ENV = true
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const FoobarFiltersModel = require('./__mocks__/FoobarFilters.js')
 const FoobarFilters = require('./__mocks__/FoobarFiltersClass.js')
-const dbName = 'test_int_filterbase'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -18,8 +17,11 @@ jest.mock('../../../config.js', () => ({
 }))
 
 describe('Int::structs/db/FilterBase Database', function () {
+  let server
   beforeAll(async function () {
-    await mongoose.connect(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    await mongoose.connect(uri, CON_OPTIONS)
   })
   beforeEach(async function () {
     await mongoose.connection.db.dropDatabase()
@@ -67,7 +69,7 @@ describe('Int::structs/db/FilterBase Database', function () {
     })
   })
   afterAll(async function () {
-    await mongoose.connection.db.dropDatabase()
     await mongoose.connection.close()
+    await server.close()
   })
 })

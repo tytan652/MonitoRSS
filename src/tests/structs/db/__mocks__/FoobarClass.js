@@ -23,7 +23,7 @@ class FoobarClass extends Base {
   }
 
   static get Model () {
-    return Foobar
+    return Foobar.Model
   }
 }
 

@@ -1,8 +1,8 @@
 process.env.TEST_ENV = true
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const initialize = require('../../initialization/index.js')
 const checkArticleIndexes = require('../../maintenance/checkArticleIndexes.js')
-const dbName = 'test_int_checkIndexes'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -19,10 +19,13 @@ jest.mock('../../config.js', () => ({
 }))
 
 describe('Int::maintenance/checkArticleIndexes', function () {
+  let server
   /** @type {import('mongoose').Connection} */
   let con
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
   })
   beforeEach(async function () {
@@ -64,7 +67,7 @@ describe('Int::maintenance/checkArticleIndexes', function () {
     await con.collection('articles').dropIndexes()
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

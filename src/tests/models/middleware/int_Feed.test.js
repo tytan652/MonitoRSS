@@ -1,8 +1,7 @@
 const FeedModel = require('../../../models/Feed.js')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const intitialize = require('../../../initialization/index.js')
 const mongoose = require('mongoose')
-
-const dbName = 'test_int_middleware_feed'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -10,11 +9,19 @@ const CON_OPTIONS = {
 }
 
 describe('Int::models/middleware/Feed', function () {
+  let server
+  /**
+   * @type {import('mongoose').Connection}
+   */
   let con
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
-    await con.db.dropDatabase()
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await intitialize.setupModels(con)
+  })
+  beforeEach(async function () {
+    await con.db.dropDatabase()
   })
   it('throws an error if feed tries to change guild', async function () {
     const id = 'wq23etr54ge5hu'
@@ -33,7 +40,7 @@ describe('Int::models/middleware/Feed', function () {
       .rejects.toThrow('Guild cannot be changed')
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

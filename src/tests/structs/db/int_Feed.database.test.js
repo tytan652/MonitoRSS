@@ -1,4 +1,4 @@
-process.env.TEST_ENV = true
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const Feed = require('../../../structs/db/Feed.js')
 const FeedModel = require('../../../models/Feed.js')
 const FilteredFormatModel = require('../../../models/FilteredFormat.js')
@@ -22,12 +22,15 @@ jest.mock('../../../config.js', () => ({
 }))
 
 describe('Int::structs/db/Feed Database', function () {
+  let server
   /** @type {import('mongoose').Connection} */
   let con
   /** @type {import('mongoose').Collection} */
   let collection
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
     collection = con.db.collection('feeds')
   })
@@ -143,7 +146,7 @@ describe('Int::structs/db/Feed Database', function () {
       .resolves.toHaveLength(0)
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

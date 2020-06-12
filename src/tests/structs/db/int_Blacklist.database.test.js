@@ -1,8 +1,7 @@
-process.env.TEST_ENV = true
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const Blacklist = require('../../../structs/db/Blacklist.js')
 const initialize = require('../../../initialization/index.js')
-const dbName = 'test_int_blacklists'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -18,15 +17,20 @@ jest.mock('../../../config.js', () => ({
 }))
 
 describe('Int::structs/db/Blacklist Database', function () {
+  let server
   /** @type {import('mongoose').Connection} */
   let con
   /** @type {import('mongoose').Collection} */
   let collection
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
-    await con.db.dropDatabase()
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
     collection = con.db.collection('blacklists')
+  })
+  beforeEach(async function () {
+    await con.db.dropDatabase()
   })
   it('saves correctly', async function () {
     const data = {
@@ -56,7 +60,7 @@ describe('Int::structs/db/Blacklist Database', function () {
     }
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

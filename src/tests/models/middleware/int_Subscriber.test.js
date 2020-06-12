@@ -1,8 +1,7 @@
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const SubscriberModel = require('../../../models/Subscriber.js')
 const initialize = require('../../../initialization/index.js')
 const mongoose = require('mongoose')
-
-const dbName = 'test_int_middleware_subscriber'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -10,11 +9,16 @@ const CON_OPTIONS = {
 }
 
 describe('Int::models/middleware/Subscriber', function () {
+  let server
   let con
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
-    await con.db.dropDatabase()
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
+  })
+  beforeEach(async function () {
+    await con.db.dropDatabase()
   })
   it('throws an error if the feed does not exist', async function () {
     const subscriber = new SubscriberModel.Model({
@@ -51,7 +55,7 @@ describe('Int::models/middleware/Subscriber', function () {
       .rejects.toThrow('Feed cannot be changed')
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

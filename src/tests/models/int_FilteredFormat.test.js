@@ -1,8 +1,8 @@
 process.env.TEST_ENV = true
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const FilteredFormatModel = require('../../models/FilteredFormat.js')
 const initialize = require('../../initialization/index.js')
-const dbName = 'test_int_filteredformat'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -10,15 +10,20 @@ const CON_OPTIONS = {
 }
 
 describe('Int::models/FilteredFormat', function () {
+  let server
   /** @type {import('mongoose').Connection} */
   let con
   /** @type {import('mongoose').Collection} */
   let collection
   beforeAll(async function () {
-    con = await mongoose.createConnection(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
-    await con.db.dropDatabase()
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
     await initialize.setupModels(con)
     collection = con.db.collection('filtered_formats')
+  })
+  beforeEach(async function () {
+    await con.dropDatabase()
   })
   it('saves with filters', async function () {
     const feedID = new mongoose.Types.ObjectId()
@@ -67,7 +72,7 @@ describe('Int::models/FilteredFormat', function () {
     expect(found).toHaveLength(2)
   })
   afterAll(async function () {
-    await con.db.dropDatabase()
     await con.close()
+    await server.close()
   })
 })

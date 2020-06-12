@@ -1,7 +1,7 @@
-process.env.TEST_ENV = true
 const mongoose = require('mongoose')
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const LinkLogic = require('../../structs/LinkLogic.js')
-const dbName = 'test_int_linklogic'
+const initialize = require('../../initialization/index.js')
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -17,11 +17,16 @@ jest.mock('../../config.js', () => ({
 }))
 
 describe('Int::structs/LinkLogic Database', function () {
+  let server
+  let connection
   beforeAll(async function () {
-    await mongoose.connect(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    connection = await mongoose.createConnection(uri, CON_OPTIONS)
+    await initialize.setupModels(connection)
   })
   beforeEach(async function () {
-    await mongoose.connection.db.dropDatabase()
+    connection.db.dropDatabase()
   })
   it('sends new articles if new ID', async function () {
     const articleList = [{
@@ -488,7 +493,7 @@ describe('Int::structs/LinkLogic Database', function () {
     }]
     const logic = new LinkLogic(logicData)
     await logic.run(docs)
-    const all = await mongoose.connection.collection('articles').find().toArray()
+    const all = await connection.collection('articles').find().toArray()
     for (const item of all) {
       expect(item).toEqual(expect.objectContaining({
         properties: {}
@@ -496,7 +501,7 @@ describe('Int::structs/LinkLogic Database', function () {
     }
   })
   afterAll(async function () {
-    await mongoose.connection.db.dropDatabase()
-    await mongoose.connection.close()
+    await connection.close()
+    await server.stop()
   })
 })

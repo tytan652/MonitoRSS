@@ -11,6 +11,17 @@ const FoobarSchema = new mongoose.Schema({
   objectId: mongoose.Types.ObjectId
 })
 
-const Foobar = mongoose.model('Foobar', FoobarSchema)
+/**
+ * @type {import('mongoose').Model}
+ */
+exports.Model = null
 
-module.exports = Foobar
+/**
+ * @param {import('mongoose').Connection} connection
+ */
+function setup (connection) {
+  const model = connection.model('Foobar', FoobarSchema)
+  exports.Model = model
+}
+
+exports.setup = setup

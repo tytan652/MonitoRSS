@@ -1,8 +1,7 @@
-process.env.TEST_ENV = true
+const { MongoMemoryServer } = require('mongodb-memory-server')
 const Foobar = require('./__mocks__/Foobar.js')
 const FoobarClass = require('./__mocks__/FoobarClass.js')
 const mongoose = require('mongoose')
-const dbName = 'test_int_base'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -18,13 +17,20 @@ jest.mock('../../../config.js', () => ({
 }))
 
 describe('Int::structs/db/Base Database', function () {
+  let server
+  let con
   beforeAll(async function () {
-    await mongoose.connect(`mongodb://localhost:27017/${dbName}`, CON_OPTIONS)
-    await mongoose.connection.db.dropDatabase()
+    server = new MongoMemoryServer()
+    const uri = await server.getUri()
+    con = await mongoose.createConnection(uri, CON_OPTIONS)
+    Foobar.setup(con)
+  })
+  beforeEach(async function () {
+    await con.db.dropDatabase()
   })
   it('initializes correctly', async function () {
     const initData = { foo: 'qgfdew4' }
-    const initFoobar = new Foobar(initData)
+    const initFoobar = new Foobar.Model(initData)
     const doc = await initFoobar.save()
     const foobar = new FoobarClass(doc)
     expect(foobar.data).toEqual(JSON.parse(JSON.stringify(doc.toObject())))
@@ -42,12 +48,12 @@ describe('Int::structs/db/Base Database', function () {
     await foobar.save()
     expect(foobar.document).toBeInstanceOf(mongoose.Model)
     expect(foobar._saved).toEqual(true)
-    const found = Foobar.findOne(data).exec()
+    const found = Foobar.Model.findOne(data).exec()
     expect(found).toBeDefined()
   })
   it('gets', async function () {
     const initData = { foo: 'q352tew4', baz: 235 }
-    const initFoobar = new Foobar(initData)
+    const initFoobar = new Foobar.Model(initData)
     const doc = await initFoobar.save()
     const foobar = await FoobarClass.get(doc._id.toHexString())
     expect(foobar.document).toBeInstanceOf(mongoose.Model)
@@ -69,23 +75,23 @@ describe('Int::structs/db/Base Database', function () {
       foo: 'bfgjz',
       baz: 3
     }
-    await new Foobar(initData1).save()
-    await new Foobar(initData2).save()
-    await new Foobar(initData3).save()
+    await new Foobar.Model(initData1).save()
+    await new Foobar.Model(initData2).save()
+    await new Foobar.Model(initData3).save()
     const found = await FoobarClass.getBy('foo', 'bfgjz')
     expect(found.data).toEqual(expect.objectContaining(initData2))
   })
   it('deletes', async function () {
-    const initFoobar = new Foobar({ foo: 'abc' })
+    const initFoobar = new Foobar.Model({ foo: 'abc' })
     const doc = await initFoobar.save()
     const foobar = new FoobarClass(doc, true)
     await foobar.delete()
-    const queried = await Foobar.findById(doc._id.toHexString())
+    const queried = await Foobar.Model.findById(doc._id.toHexString())
     expect(queried).toBeNull()
   })
   it('gets many', async function () {
-    const a = new Foobar({ foo: 'a' })
-    const b = new Foobar({ foo: 'b' })
+    const a = new Foobar.Model({ foo: 'a' })
+    const b = new Foobar.Model({ foo: 'b' })
     const saves = await Promise.all([a.save(), b.save()])
     const [id1, id2] = saves.map(doc => doc._id.toHexString())
     const classes = await FoobarClass.getMany([id1, id2])
@@ -98,23 +104,23 @@ describe('Int::structs/db/Base Database', function () {
   })
   it('updates', async function () {
     const initData = { foo: 'exquisite' }
-    const initFoobar = new Foobar(initData)
+    const initFoobar = new Foobar.Model(initData)
     const doc = await initFoobar.save()
     const foobar = new FoobarClass(doc, true)
     const newFooValue = 'changzz'
     foobar.foo = newFooValue
     await foobar.save()
-    const found = await Foobar.findById(initFoobar.id)
+    const found = await Foobar.Model.findById(initFoobar.id)
     expect(found.foo).toEqual(newFooValue)
   })
   it('deletes a key on undefined', async function () {
     const initData = { foo: 'w49ti093u4j', baz: 987 }
-    const initFoobar = new Foobar(initData)
+    const initFoobar = new Foobar.Model(initData)
     const doc = await initFoobar.save()
     const foobar = new FoobarClass(doc, true)
     foobar.foo = undefined
     await foobar.save()
-    const found = await Foobar.findById(initFoobar.id).lean().exec()
+    const found = await Foobar.Model.findById(initFoobar.id).lean().exec()
     expect(Object.keys(found)).not.toContain('foo')
   })
   it('doesn\'t add keys after update', async function () {
@@ -123,14 +129,14 @@ describe('Int::structs/db/Base Database', function () {
     const saved = await foobar.save()
     foobar.foo = 'abc'
     await foobar.save()
-    const found = await Foobar.findById(saved._id).lean().exec()
+    const found = await Foobar.Model.findById(saved._id).lean().exec()
     expect(found.nullField).toBeUndefined()
   })
   it('doesn\'t set object field when undefined', async function () {
     const initData = { foo: 'w44jk', baz: 135749 }
     const foobar = new FoobarClass(initData)
     const saved = await foobar.save()
-    const found = await Foobar.findById(saved._id).lean().exec()
+    const found = await Foobar.Model.findById(saved._id).lean().exec()
     expect(Object.keys(found)).not.toContain('object')
   })
   it('doesn\'t set object field when undefined after update', async function () {
@@ -139,7 +145,7 @@ describe('Int::structs/db/Base Database', function () {
     const saved = await foobar.save()
     foobar.foo = 'zack'
     await foobar.save()
-    const found = await Foobar.findById(saved._id).lean().exec()
+    const found = await Foobar.Model.findById(saved._id).lean().exec()
     expect(Object.keys(found)).not.toContain('object')
   })
   it('sets default empty array', async function () {
@@ -154,16 +160,16 @@ describe('Int::structs/db/Base Database', function () {
     const saved = await foobar.save()
     foobar.foo = 'qwe'
     await foobar.save()
-    const found = await Foobar.findById(saved._id).lean().exec()
+    const found = await Foobar.Model.findById(saved._id).lean().exec()
     expect(Object.keys(found)).toContain('array')
   })
   it('autocasts to ObjectId for strings', async function () {
     const initData = { objectId: new mongoose.Types.ObjectId().toHexString() }
     const foobar = new FoobarClass(initData)
-    expect(foobar.save()).resolves.toEqual(foobar)
+    await expect(foobar.save()).resolves.toEqual(foobar)
   })
   afterAll(async function () {
-    await mongoose.connection.db.dropDatabase()
-    await mongoose.connection.close()
+    await con.close()
+    await server.close()
   })
 })
