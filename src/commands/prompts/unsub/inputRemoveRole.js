@@ -15,11 +15,11 @@ const createLogger = require('../../../util/logger/create.js')
 /**
  * @param {Data} data
  */
-function inputRemoveRoleVisual (data) {
+async function inputRemoveRoleVisual (data) {
   const { profile, feeds, member, subscribers } = data
   const translate = Translator.createProfileTranslator(profile)
   const memberRoles = member.roles.cache
-  let output = ''
+  let output = translate('commands.unsub.listInputRole') + '\n'
   for (let i = 0; i < feeds.length; ++i) {
     const feed = feeds[i]
     const feedSubscribers = subscribers[i]
@@ -33,9 +33,8 @@ function inputRemoveRoleVisual (data) {
     }
     output += `\n**${feed.url}** (<#${feed.channel}>)\n`
     const mentionStrings = memberSubscribedRoles.map(r => `<@&${r.id}>`)
-    output += splitMentionsByNewlines(mentionStrings) + '\n\n'
+    output += splitMentionsByNewlines(mentionStrings) + '\n'
   }
-  output += translate('commands.unsub.listInputRole')
   return new MessageVisual(output, {
     split: true
   })
@@ -49,12 +48,14 @@ async function inputRemoveRoleFn (message, data) {
   const { client, member, author, guild, content: roleName } = message
   const { subscribers, profile } = data
   const translate = Translator.createProfileTranslator(profile)
+  const mention = message.mentions.roles.first()
   /**
    * Input is a role name with no capitalization requirements
    */
   const subscriberIDs = new Set(subscribers.flat().map(s => s.id))
-  const memberSubscribedRoles = member.roles.cache.filter(role => subscriberIDs.has(role.id))
-  const memberRole = memberSubscribedRoles.find(role => role.name.toLowerCase() === roleName.toLowerCase())
+  const memberSubscribedRoles = member.roles.cache
+    .filter(role => subscriberIDs.has(role.id))
+  const memberRole = memberSubscribedRoles.find(role => role.name.toLowerCase() === roleName.toLowerCase() || (mention && role.id === mention.id))
   if (!memberRole) {
     throw new Rejection(translate('commands.unsub.invalidRole'))
   }

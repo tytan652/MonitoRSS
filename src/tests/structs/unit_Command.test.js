@@ -342,13 +342,16 @@ describe('Unit::structs/Command', function () {
       jest.spyOn(Command, 'BOT_PERMISSIONS', 'get')
         .mockReturnValue(botPermissions)
       expect(command.getBotPermissions())
-        .toEqual(permissions)
+        .toEqual([
+          ...permissions,
+          Discord.Permissions.FLAGS.SEND_MESSAGES
+        ])
     })
-    it('returns empty array if no specific perms', function () {
+    it('returns the send message perm array if no specific perms', function () {
       const commandName = 'qaetswr'
       const command = new Command(commandName)
       expect(command.getBotPermissions())
-        .toEqual([])
+        .toEqual([Discord.Permissions.FLAGS.SEND_MESSAGES])
     })
   })
   describe('hasMemberPermission', function () {
@@ -356,64 +359,60 @@ describe('Unit::structs/Command', function () {
       jest.spyOn(Command, 'isOwnerID')
         .mockReturnValue(false)
     })
-    it('returns whether if member is owner if owner command', async function () {
+    it('returns whether if member is owner if owner command', function () {
       const command = new Command('', {}, true)
       command.owner = true
       const message = {
         member: {
-          user: {},
-          fetch: jest.fn()
+          user: {}
         },
         channel: {}
       }
       const isOwnerID = true
       jest.spyOn(Command, 'isOwnerID')
         .mockReturnValue(isOwnerID)
-      await expect(command.hasMemberPermission(message))
-        .resolves.toEqual(isOwnerID)
+      expect(command.hasMemberPermission(message))
+        .toEqual(isOwnerID)
       jest.spyOn(Command, 'isOwnerID')
         .mockReturnValue(!isOwnerID)
-      await expect(command.hasMemberPermission(message))
-        .resolves.toEqual(!isOwnerID)
+      expect(command.hasMemberPermission(message))
+        .toEqual(!isOwnerID)
     })
-    it('returns the resolved permissons', async function () {
+    it('returns the resolved permissons', function () {
       const command = new Command()
       command.owner = false
       const has = jest.fn()
       const fetchedMember = {
+        user: {},
         permissionsIn: jest.fn().mockReturnValue({
           has
         })
       }
       const message = {
-        member: {
-          user: {},
-          fetch: jest.fn().mockResolvedValue(fetchedMember)
-        },
+        member: fetchedMember,
         channel: {}
       }
       has.mockReturnValue(true)
-      await expect(command.hasMemberPermission(message))
-        .resolves.toEqual(true)
+      expect(command.hasMemberPermission(message))
+        .toEqual(true)
       has.mockReturnValue(false)
-      await expect(command.hasMemberPermission(message))
-        .resolves.toEqual(false)
+      expect(command.hasMemberPermission(message))
+        .toEqual(false)
     })
-    it('returns true if member is owner', async function () {
+    it('returns true if member is owner', function () {
       const command = new Command('', {}, true)
       command.owner = false
       const message = {
         member: {
-          user: {},
-          fetch: jest.fn()
+          user: {}
         },
         channel: {}
       }
       const isOwnerID = true
       jest.spyOn(Command, 'isOwnerID')
         .mockReturnValue(isOwnerID)
-      await expect(command.hasMemberPermission(message))
-        .resolves.toEqual(true)
+      expect(command.hasMemberPermission(message))
+        .toEqual(true)
     })
   })
   describe('hasBotPermission', function () {

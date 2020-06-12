@@ -23,7 +23,8 @@ class Command {
   static get USER_PERMISSIONS () {
     return {
       sub: [],
-      unsub: []
+      unsub: [],
+      'sub.filters': []
     }
   }
 
@@ -246,10 +247,11 @@ class Command {
    */
   getBotPermissions () {
     const name = this.name
+    const base = [Permissions.SEND_MESSAGES]
     if (name in Command.BOT_PERMISSIONS) {
-      return Command.BOT_PERMISSIONS[name]
+      return Command.BOT_PERMISSIONS[name].concat(base)
     } else {
-      return []
+      return base
     }
   }
 
@@ -258,15 +260,14 @@ class Command {
    * @param {import('discord.js').Message} message
    * @returns {boolean}
    */
-  async hasMemberPermission (message) {
+  hasMemberPermission (message) {
     const { member, channel } = message
     const isOwnerUser = Command.isOwnerID(member.user.id)
     if (isOwnerUser || this.owner) {
       return isOwnerUser
     }
     const memberPermissions = this.getMemberPermission()
-    const fetched = await member.fetch()
-    return fetched.permissionsIn(channel).has(memberPermissions)
+    return member.permissionsIn(channel).has(memberPermissions)
   }
 
   /**
@@ -288,7 +289,10 @@ class Command {
   async notifyMissingBotPerms (message) {
     const channel = message.channel
     const permissionNames = Command.getPermissionNames(this.getBotPermissions())
-    await channel.send(`I am missing one of the following permissions:\n\n${permissionNames}`)
+    if (!message.guild.me.permissionsIn(message.channel).has(Permissions.SEND_MESSAGES)) {
+      return permissionNames
+    }
+    await channel.send(`I am missing one of the following permissions:\n\n${permissionNames.join('\n')}`)
     return permissionNames
   }
 
@@ -298,13 +302,16 @@ class Command {
    * @returns {string[]} - Permission names
    */
   async notifyMissingMemberPerms (message) {
+    const channel = message.channel
+    const permissionNames = Command.getPermissionNames(this.getMemberPermission())
+    if (!message.guild.me.permissionsIn(message.channel).has(Permissions.SEND_MESSAGES)) {
+      return permissionNames
+    }
     if (this.owner) {
       await message.channel.send('You must be an owner to use this command.')
       return ['owner']
     }
-    const channel = message.channel
-    const permissionNames = Command.getPermissionNames(this.getMemberPermission())
-    await channel.send(`You are missing one of the following permissions:\n\n${permissionNames}`)
+    await channel.send(`You are missing one of the following permissions:\n\n${permissionNames.join('\n')}`)
     return permissionNames
   }
 

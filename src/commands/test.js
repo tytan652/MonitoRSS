@@ -10,8 +10,10 @@ const FeedData = require('../structs/FeedData.js')
 const runWithFeedGuild = require('./prompts/runner/run.js')
 const getConfig = require('../config.js').get
 
-module.exports = async (message, command) => {
-  const simple = message.content.endsWith('simple')
+module.exports = async (message) => {
+  const split = message.content.split(' ')
+  const simple = split.includes('simple')
+  const latest = split.includes('latest')
   const profile = await Profile.get(message.guild.id)
   const translate = Translator.createProfileTranslator(profile)
   const selectFeedNode = new PromptNode(commonPrompts.selectFeed.prompt)
@@ -23,14 +25,15 @@ module.exports = async (message, command) => {
   const config = getConfig()
   const prefix = profile && profile.prefix ? profile.prefix : config.bot.prefix
   if (await FailRecord.hasFailed(feed.url)) {
-    return message.channel.send(translate('commands.test.failed'), {
+    return message.channel.send(translate('commands.test.failed', {
       prefix
-    })
+    }))
   }
   const grabMsg = await message.channel.send(translate('commands.test.grabbingRandom'))
-  const article = await FeedFetcher.fetchRandomArticle(feed.url)
+  const article = latest ? await FeedFetcher.fetchLatestArticle(feed.url) : await FeedFetcher.fetchRandomArticle(feed.url)
   if (!article) {
-    return message.channel.send(translate('commands.test.noArticles'))
+    const string = latest ? translate('commands.test.noValidLatest') : translate('commands.test.noArticles')
+    return message.channel.send(string)
   }
   const feedData = await FeedData.ofFeed(feed)
 

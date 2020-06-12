@@ -4,8 +4,9 @@ const FeedFetcher = require('../util/FeedFetcher.js')
 const RequestError = require('../structs/errors/RequestError.js')
 const FeedParserError = require('../structs/errors/FeedParserError.js')
 const LinkLogic = require('../structs/LinkLogic.js')
-const initialize = require('./initialization.js')
+const initialize = require('../initialization/index.js')
 const databaseFuncs = require('../util/database.js')
+const devLevels = require('./devLevels.js')
 
 async function fetchFeed (headers, url, urlLog) {
   const fetchOptions = {}
@@ -122,11 +123,11 @@ async function getFeed (data, log) {
     }
     urlLog({ error: err }, 'Sending failed status during connection')
     process.send({ status: 'connected' })
-    process.send({ status: 'failed', link, rssList })
+    process.send({ status: 'failed', link, rssList, reason: err.message })
     return
   }
 
-  if (testRun) {
+  if (testRun || devLevels.disableCycleDatabase(config)) {
     return process.send({
       status: 'success',
       link
@@ -173,7 +174,7 @@ async function getFeed (data, log) {
     })
   } catch (err) {
     log.error(err, `Cycle logic for ${link}`)
-    process.send({ status: 'failed', link, rssList })
+    process.send({ status: 'failed', link, rssList, reason: err.message })
   }
 }
 

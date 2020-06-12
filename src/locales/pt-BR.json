@@ -29,7 +29,10 @@
       "description": "Abre um menu para deletar um feed de um canal."
     },
     "list": {
-      "description": "Mostrar todos os feeds ativos neste servidor."
+      "description": "Mostrar todos os feeds ativos neste servidor.",
+      "args": {
+        "[<channel mention>] [<search query>]": ""
+      }
     },
     "text": {
       "action": "Customizar texto",
@@ -59,13 +62,16 @@
     },
     "test": {
       "args": {
-        "simple": "Omite os resultados do teste e envia apenas a mensagem."
+        "[simple] [latest]": ""
       },
       "action": "testar feed",
       "description": "Abre um menu para enviar uma mensagem de teste para um artigo aleatório em um feed, juntamente com as propriedades e espaços reservados disponíveis para várias personalizações. Você pode adicionar `simple` como um parâmetro para excluir os detalhes do teste."
     },
     "sub": {
       "description": "Abre um menu para adicionar um cargo com uma menção filtrada ao usuário. Usável por qualquer um no servidor, ativável/desativável pela permissão \"Gerenciar Cargos\". Os cargo precisam estar abaixo do cargo do bot na configuração de cargos."
+    },
+    "sub.filters": {
+      "description": ""
     },
     "unsub": {
       "description": "Abre um menu semelhante ao `sub`, mas será para remover o cargo. Qualquer cargo abaixo do cargo do bot será removível."
@@ -151,6 +157,7 @@
       "noFeeds": "Você não pode criar um alerta, porque você não adicionou nenhum feed.",
       "info": "Esse comando adiciona usuários para mensagens diretas (em vez de postar esses alertas no canal do feed por padrão) quando há avisos ou alertas sobre feeds, como alterações no limite de feed ou falhas no feed. **O usuário que você está adicionando ou removendo será notificado**. A sintaxe correta é:\n\n`{{prefix}}alert add <id do usuário/mencionar>` - Adiciona um usuário a ser notificado.\n`{{prefix}}alert remove <id do usuário/mencionar>` - Remove um usuário que está sendo notificado\n`{{prefix}}alert list` - Mostra os usuarios que estão sendo notificados",
       "notFound": "O usuário {{user}} não foi encontrado neste servidor.",
+      "everyoneNotAllowed": "",
       "alreadyEnabled": "Este usuário já está sendo notificado neste servidor",
       "successDM": "A pedido do usuário {{member}}, você será notificado quando houver qualquer aviso/falhas em feeds neste servidor `{{guildName}}` (ID `{{guildID}}`).",
       "success": "Adicionado com sucesso o usuário {{member}} a ser alertado em caso de avisos/falhas. O usuário foi notificado desta mudança.",
@@ -300,15 +307,14 @@
       "optionSendArticleDescription": "Envie um artigo escolhido aleatoriamente que passe o(s) filtro(s) atual(s), se existirem.",
       "removedAllSuccess": "Todos os filtros de feed foram removidos com sucesso de <{{link}}>.",
       "noFilters": "Não há filtros atribuídos a {{link}}.",
-      "listFilters": "Lista de filtros atribuídos",
-      "listFiltersDescription": "**Feed Título:** {{title}}\n**Feed Link:** {{link}}\n\nAbaixo estão as categorias de filtro com suas palavras/frases em cada um.\u200b\n\u200b\n",
+      "listFiltersDescription": "",
       "noArticlesPassed": "Nenhum artigo conseguiu passar nos filtros deste feed.",
       "noFiltersTryAgain": "",
       "connectionFailureLimit": ""
     },
     "help": {
       "controlPanelLink": "Não deixe de conferir seu painel de controle em {{url}} para facilitar o gerenciamento de feeds!",
-      "description": "Argumentos para comandos são adicionados após o comando. Por exemplo: `{{prefixo}}test simple`. Não inclua `<` ou `>` nos argumentos.",
+      "description": "",
       "arguments": "Argumentos",
       "support": "\nSuporte pode ser encontrado em https://discord.gg/pudv7Rx",
       "checkDM": "Verifique suas mensagens diretas! 😉"
@@ -324,7 +330,7 @@
       "statusFailed": "Status: FALHADO\n",
       "statusOk": "Status: OK {{failCount}}\n",
       "serverLimit": "Limite do servidor",
-      "failAlert": "**Atenção!** Feeds que atingiram o limite de falhas na conexão de {{failLimit}} foram detectados. Eles não serão mais atualizados novamente até que a instância do bot seja reiniciada. Remova ou use o **{{prefixo}}refresh** para tentar redefinir seu status.\u200b\n\u200b\n",
+      "failAlert": "",
       "feedList": "Lista de feeds",
       "feedListChannel": "Lista de feeds no canal #{{channel}}",
       "refreshRate": "Taxa de verificação",
@@ -374,7 +380,7 @@
         "description": "",
         "noSubscriber": "",
         "optionRemoveFilter": "",
-        "optionAddFilter": "Adicionar filtro(s) a menção",
+        "optionAddFilter": "Adicionar filtro(s)",
         "optionRemoveAllFilters": "",
         "optionListFilters": "",
         "listFiltersDescription": "",
@@ -485,7 +491,8 @@
     "test": {
       "failed": "",
       "grabbingRandom": "Buscando um artigo de feed aleatório ...",
-      "noArticles": "Não há artigos neste feed para enviar."
+      "noArticles": "Não há artigos neste feed para enviar.",
+      "noValidLatest": ""
     },
     "webhook": {
       "existingFound": "Um webhook existente foi encontrado ({{webhookMention}}). Você pode digitar `{remove}` para desconectar o webhook existente ou continuar, e sua nova configuração sobrescreverá a existente.\n\n",
@@ -515,7 +522,21 @@
       "directSubscribeExists": "",
       "directSubscribeSuccess": "",
       "alreadyHaveRole": "",
-      "directSubscriberDisabled": ""
+      "directSubscriberDisabled": "",
+      "filters": {
+        "description": "",
+        "noSubscribedFeeds": "",
+        "optionAddFilters": "",
+        "optionAddFiltersDescription": "",
+        "optionRemoveFilters": "",
+        "optionRemoveFiltersDescription": "",
+        "optionRemoveAllFilters": "",
+        "optionRemoveAllFiltersDescription": "",
+        "optionListFilters": "",
+        "optionListFiltersDescription": "",
+        "optionSendFilteredArticle": "",
+        "optionSendFilteredArticleDescription": ""
+      }
     },
     "unsub": {
       "title": "Remoção de auto-inscrição",
@@ -577,7 +598,7 @@
       "feedSelectionMenu": "Menu de seleção de feed",
       "action": "Action",
       "prompt": "Escolha um feed nesse canal digitando o número para executar a ação solicitada.",
-      "multiSelect": "Você pode selecionar vários feeds por separação com vírgulas (por exemplo `1,3,8`).",
+      "multiSelect": "Você pode selecionar vários feeds por separação com vírgulas (por exemplo `1,3,8`) ou com um intervalo (por exemplo `1-3,5,7-9`).",
       "exitToCancel": "digite `exit` para cancelar."
     },
     "errors": {

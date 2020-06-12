@@ -7,12 +7,14 @@ const Supporter = require('./db/Supporter.js')
 const ScheduleManager = require('./ScheduleManager.js')
 const EventEmitter = require('events').EventEmitter
 const maintenance = require('../maintenance/index.js')
-const initialize = require('../util/initialization.js')
+const initialize = require('../initialization/index.js')
 const createLogger = require('../util/logger/create.js')
 const ipc = require('../util/ipc.js')
 const configuration = require('../config.js')
 const setConfig = configuration.set
 const getConfig = configuration.get
+const devLevels = require('../util/devLevels.js')
+const dumpHeap = require('../util/dumpHeap.js')
 
 /**
  * @typedef {Object} ClientManagerOptions
@@ -52,6 +54,15 @@ class ClientManager extends EventEmitter {
     this.shardingManager.on('shardCreate', shard => {
       shard.on('message', message => this.messageHandler(shard, message))
     })
+  }
+
+  setupHeapDumps () {
+    // Every 10 minutes
+    const prefix = 'sm'
+    dumpHeap(prefix)
+    setInterval(() => {
+      dumpHeap(prefix)
+    }, 1000 * 60 * 15)
   }
 
   createScheduleManager () {
@@ -171,18 +182,20 @@ class ClientManager extends EventEmitter {
       this.scheduleManager.addSchedules(schedules)
       await this.shardingManager.spawn(shardCount || undefined)
     } catch (err) {
-      if (err.json) {
-        err.json().then((response) => {
+      if (err.headers) {
+        const isJSON = err.headers.get('content-type') === 'application/json'
+        const promise = isJSON ? err.json() : err.text()
+        promise.then((response) => {
           this.log.error({ response }, 'ClientManager failed to start. Verify token and observe rate limits.')
-          process.exit(1)
-        }).catch((jsonErr) => {
+        }).catch((parseErr) => {
           this.log.error(err, 'ClientManager failed to start')
-          this.log.error(jsonErr, 'Failed to parse response from ClientManager spawn')
-          process.exit(1)
+          this.log.error(parseErr, `Failed to parse response from ClientManager spawn (Status ${err.status})`)
+        }).finally(() => {
+          this.kill()
         })
       } else {
         this.log.error(err, 'ClientManager failed to start')
-        process.exit(1)
+        this.kill()
       }
     }
   }
@@ -197,7 +210,10 @@ class ClientManager extends EventEmitter {
     }
     if (ipc.isLoopback(message)) {
       return this.shardingManager.broadcast(message)
-        .catch(err => this._handleErr(err, message))
+        .catch(err => {
+          this.log.error(err, `Sharding Manager broadcast message handling error for message type ${message.type}`)
+          this.kill()
+        })
     }
     switch (message.type) {
       case ipc.TYPES.KILL: this.kill(); break
@@ -213,12 +229,7 @@ class ClientManager extends EventEmitter {
     this.shardingManager.shards.forEach(shard => {
       shard.kill()
     })
-    process.exit(0)
-  }
-
-  _handleErr (err, message) {
-    this.log.error(err, `Sharding Manager broadcast message handling error for message type ${message.type}`)
-    this.kill()
+    process.exit(1)
   }
 
   async _shardReadyEvent (shard, message) {
@@ -263,9 +274,16 @@ class ClientManager extends EventEmitter {
       await maintenance.prunePostInit(this.guildIdsByShard)
       this.log.debug('Post-init finished')
       if (Supporter.enabled) {
-        await Patron.refresh()
+        Patron.refresh().catch(err => {
+          this.log.error(err, 'Failed to refresh patrons')
+        })
       }
-      this.scheduleManager.beginTimers()
+      if (!devLevels.disableCycles()) {
+        this.scheduleManager.beginTimers()
+      }
+      if (devLevels.dumpHeap()) {
+        this.setupHeapDumps()
+      }
       this.broadcast(ipc.TYPES.FINISHED_INIT)
       this.emit('finishInit')
     } catch (err) {

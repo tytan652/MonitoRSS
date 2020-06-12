@@ -1,11 +1,15 @@
 const Discord = require('discord.js')
 const moment = require('moment')
+const GeneralStats = require('../models/GeneralStats.js')
 const ScheduleStats = require('../structs/db/ScheduleStats.js')
 
 module.exports = async (message) => {
-  const results = await ScheduleStats.getAll()
+  const [allScheduleStats, allGeneralStats] = await Promise.all([
+    ScheduleStats.getAll(),
+    GeneralStats.Model.find().lean().exec()
+  ])
   const bot = message.client
-  const scheduleStats = results.find(r => r._id === 'default')
+  const scheduleStats = allScheduleStats.find(r => r._id === 'default')
   if (!scheduleStats) {
     return message.channel.send('More time is needed to gather enough information. Try again later.')
   }
@@ -20,24 +24,30 @@ module.exports = async (message) => {
     cycleTime: scheduleStats.cycleTime,
     cycleFails: scheduleStats.cycleFails,
     cycleURLs: scheduleStats.cycleURLs,
-    lastUpdated: new Date(scheduleStats.lastUpdated)
+    lastUpdated: new Date(scheduleStats.lastUpdated),
+    articlesSent: allGeneralStats.find(doc => doc._id === GeneralStats.TYPES.ARTICLES_SENT),
+    articlesBlocked: allGeneralStats.find(doc => doc._id === GeneralStats.TYPES.ARTICLES_BLOCKED)
   }
 
   const visual = new Discord.MessageEmbed()
-    .setAuthor('Basic Performance Stats')
+    .setAuthor('Basic Stats')
     .setDescription(`
 **Unique Feeds** - Number of unique feed links (duplicate links are not counted).
 **Total Feeds** - Number of total feeds.
-**Cycle Duration** - The time it takes to process all the unique feed links.
-**Cycle Failures** - The number of failures out of the number of unique feeds per cycle. 
-**Success Rate** - The rate at which unique links connect successfully per cycle. A high rate is necessary to ensure that all feeds are fetched.\n\u200b`)
+**Cycle Duration** - Time taken to process all the unique feeds.
+**Cycle Failures** - Number of failures out of the number of unique feeds per cycle. 
+**Success Rate** - Rate at which unique links connect successfully per cycle. A high rate is necessary to ensure that all feeds are fetched.
+**Articles Sent** - Total number of articles sent
+**Articles Blocked** - Total number of articles blocked by article rate limits\n\u200b`)
 
   const guilds = `${aggregated.guilds}`
   const feeds = `${aggregated.feeds}`
   const cycleURLs = `${aggregated.cycleURLs}`
-  const cycleFails = `${aggregated.cycleFails.toFixed(2)}`
+  const cycleFails = `${aggregated.cycleFails}`
   const cycleTime = `${aggregated.cycleTime.toFixed(2)}s`
   const successRate = `${((1 - aggregated.cycleFails / aggregated.cycleURLs) * 100).toFixed(2)}%`
+  const articlesSent = aggregated.articlesSent ? aggregated.articlesSent.data : 0
+  const articlesBlocked = aggregated.articlesBlocked ? aggregated.articlesBlocked.data : 0
 
   visual
     .addField('Servers', guilds, true)
@@ -57,6 +67,9 @@ module.exports = async (message) => {
     .addField('Cycle Duration', cycleTime, true)
     .addField('Cycle Failures', cycleFails, true)
     .addField('Success Rate', successRate, true)
+    .addField('\u200b', '\u200b', true)
+    .addField('Articles Sent', articlesSent, true)
+    .addField('Articles Blocked', articlesBlocked, true)
     .addField('\u200b', '\u200b', true)
     .setFooter(diff)
 

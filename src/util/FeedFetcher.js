@@ -193,9 +193,9 @@ class FeedFetcher {
       res = await cloudscraper({ method: 'GET', uri, resolveWithFullResponse: true })
     } catch (err) {
       if (err.statusCode && err.statusCode !== 200) {
-        throw new RequestError(err.statusCode, `Bad Cloudflare status code (${err.statusCode})`)
+        throw new RequestError(err.statusCode, `Bad Cloudflare status code (${err.statusCode})`, true)
       } else {
-        throw new RequestError(null, `Cloudflare - ${err.message}` || 'Cloudscraper error')
+        throw new RequestError(this.REQUEST_ERROR_CODE, `Cloudflare - ${err.message}` || 'Cloudscraper error', true)
       }
     }
     if (res.statusCode !== 200) {
@@ -290,6 +290,18 @@ class FeedFetcher {
     return { articleList, idType }
   }
 
+  static async fetchFilteredFeed (url, filters) {
+    const { articleList, idType } = await this.fetchFeed(url)
+    const filtered = articleList.filter(article => {
+      const parsed = new Article(article, { feed: {} })
+      return parsed.testFilters(filters).passed
+    })
+    return {
+      articleList: filtered,
+      idType
+    }
+  }
+
   /**
    * Get a random article in the feed
    * @param {string} url - The URL to fetch
@@ -297,19 +309,30 @@ class FeedFetcher {
    * @returns {object|null} - Either null, or an article object
    */
   static async fetchRandomArticle (url, filters) {
+    const { articleList } = filters
+      ? await this.fetchFilteredFeed(url, filters)
+      : await this.fetchFeed(url)
+    if (articleList.length === 0) {
+      return null
+    }
+    return articleList[Math.round(Math.random() * (articleList.length - 1))]
+  }
+
+  static async fetchLatestArticle (url) {
     const { articleList } = await this.fetchFeed(url)
-    if (articleList.length === 0) return null
-    if (!filters) {
-      return articleList[Math.round(Math.random() * (articleList.length - 1))]
+    if (articleList.length === 0) {
+      return null
     }
-    const filtered = []
-    for (const article of articleList) {
-      const parsedArticle = new Article(article, { feed: {} })
-      if (parsedArticle.testFilters(filters).passed) {
-        filtered.push(article)
-      }
+    const allHaveValidDates = articleList.every(article => {
+      const date = new Date(article.pubDate)
+      return !isNaN(date.getTime())
+    })
+    if (!allHaveValidDates) {
+      return null
     }
-    return filtered.length === 0 ? null : filtered[Math.round(Math.random() * (filtered.length - 1))]
+    return articleList.sort((a, b) => {
+      return new Date(b.pubDate) - new Date(a.pubDate)
+    })[0]
   }
 
   /**

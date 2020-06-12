@@ -4,7 +4,7 @@ const LocalizedPrompt = require('../common/utils/LocalizedPrompt.js')
 const Profile = require('../../../structs/db/Profile.js')
 const Translator = require('../../../structs/Translator.js')
 const createLogger = require('../../../util/logger/create.js')
-const getConfig = require('../../../config.js')
+const getConfig = require('../../../config.js').get
 
 /**
  * @typedef {Object} Data
@@ -54,9 +54,12 @@ async function askTimezoneFn (message, data) {
     profile.timezone = isDefault ? undefined : setting
     await profile.save()
   } else if (!isDefault) {
-    const newProfile = new Profile()
+    const newProfile = new Profile({
+      _id: message.guild.id,
+      name: message.guild.name,
+      timezone: setting
+    })
     await newProfile.save()
-    newProfile.timezone = setting
   }
   log.info({
     guild: message.guild,

@@ -65,7 +65,7 @@ const advancedSchema = Joi.object({
 })
 
 const schema = Joi.object({
-  dev: Joi.bool().strict(),
+  dev: Joi.number().strict().greater(-1),
   _vip: Joi.bool().strict(),
   _vipRefreshRateMinutes: Joi.number().strict(),
   log: logSchema.default(logSchema.validate({}).value),
@@ -95,7 +95,7 @@ module.exports = {
         .map(d => d.message)
         .join('\n')
 
-      throw new TypeError(`Config validation failed\n\n${str}\n`)
+      throw new TypeError(`Bot config validation failed\n\n${str}\n`)
     }
   }
 }

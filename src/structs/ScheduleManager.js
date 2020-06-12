@@ -3,6 +3,8 @@ const ScheduleRun = require('./ScheduleRun.js')
 const createLogger = require('../util/logger/create.js')
 const EventEmitter = require('events').EventEmitter
 const getConfig = require('../config.js').get
+const devLevels = require('../util/devLevels.js')
+const dumpHeap = require('../util/dumpHeap.js')
 
 /**
  * @typedef {string} FeedURL
@@ -41,8 +43,7 @@ class ScheduleManager extends EventEmitter {
 
   async _onNewArticle (newArticle) {
     const { article, feedObject } = newArticle
-    const config = getConfig()
-    if (config.dev === true) {
+    if (devLevels.disableOutgoingMessages()) {
       return
     }
     if (this.debugFeedIDs.has(feedObject._id)) {
@@ -57,16 +58,17 @@ class ScheduleManager extends EventEmitter {
    * same time, causing race conditions
    *
    * @param {string} url
+   * @param {string} [reason]
    */
-  async _onConnectionFailure (url) {
-    if (this.urlFailuresRecording.has(url) || this.testRuns) {
+  async _onConnectionFailure (url, reason) {
+    if (this.urlFailuresRecording.has(url) || this.testRuns || devLevels.disableCycleDatabase()) {
       return
     }
     this.urlFailuresRecording.add(url)
     try {
-      await FailRecord.record(url)
+      await FailRecord.record(url, reason)
     } catch (err) {
-      this.log.error(err, `Failed to record url fail record ${url}`)
+      this.log.error(err, `Failed to record url fail record ${url} with reason ${reason}`)
     }
     this.urlFailuresRecording.delete(url)
   }
@@ -91,7 +93,7 @@ class ScheduleManager extends EventEmitter {
    * @param {import('./db/Feed.js')} feed
    */
   async _onFeedDisabled (feed) {
-    if (this.sendingDisabledNotifications.has(feed._id)) {
+    if (this.sendingDisabledNotifications.has(feed._id) || devLevels.disableOutgoingMessages()) {
       return
     }
     this.sendingDisabledNotifications.add(feed._id)
@@ -105,7 +107,7 @@ class ScheduleManager extends EventEmitter {
    * @param {import('./db/Feed.js')} feed
    */
   async _onFeedEnabled (feed) {
-    if (this.sendingEnabledNotifications.has(feed._id)) {
+    if (this.sendingEnabledNotifications.has(feed._id) || devLevels.disableOutgoingMessages()) {
       return
     }
     this.sendingEnabledNotifications.add(feed._id)
@@ -119,13 +121,17 @@ class ScheduleManager extends EventEmitter {
    * @param {import('./db/FailRecord.js')} record
    */
   async alertFailRecord (record) {
+    if (devLevels.disableOutgoingMessages()) {
+      return
+    }
+    const config = getConfig()
     const url = record._id
     record.alerted = true
     await record.save()
     const feeds = await record.getAssociatedFeeds()
     this.log.info(`Sending fail notification for ${url} to ${feeds.length} channels`)
     feeds.forEach(({ channel }) => {
-      const message = `Feed <${url}> in channel <#${channel}> has reached the connection failure limit, and will not be retried until it is manually refreshed by any server using this feed. Use the \`list\` command in your server for more information.`
+      const message = `Feed <${url}> in channel <#${channel}> has reached the connection failure limit after continuous (${config.feeds.hoursUntilFail} hours) connection failures (recorded reason: ${record.reason}). The feed will not be retried until it is manually refreshed by any server using this feed. Use the \`list\` command in your server for more information.`
       this.emitAlert(channel, message)
     })
   }
@@ -176,6 +182,9 @@ class ScheduleManager extends EventEmitter {
     run.removeAllListeners()
     this.scheduleRuns.splice(this.scheduleRuns.indexOf(run), 1)
     this.incrementRunCount(schedule)
+    if (schedule.name === 'default' && devLevels.dumpHeap()) {
+      dumpHeap('schedulerun')
+    }
   }
 
   /**

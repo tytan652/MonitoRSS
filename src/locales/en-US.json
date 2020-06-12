@@ -66,7 +66,7 @@
     "list": {
       "description": "List all active feeds in server.",
       "args": {
-        "<channel mention>": "Only list the feeds in the mentioned channel."
+        "[<channel mention>] [<search query>]": "Mention a channel to only show feeds in that channel, and/or add a search query."
       }
     },
     "locale": {
@@ -115,9 +115,12 @@
     "sub": {
       "description": "Open a menu to add a role with an active feed subscription to the user. Usable by anyone in server, enabled/disabled by \"Manage Roles\" permission. Roles *must* be below the bot's role in role order in role settings."
     },
+    "sub.filters": {
+      "description": "OPen a menu to add filters to yourself (or test them) as a direct subscriber for a particular feed."
+    },
     "test": {
       "args": {
-        "simple": "Omit the test results and only send the message."
+        "[simple] [latest]": "Add `simple` to omit test results. Add `latest` to try and send the latest article."
       },
       "action": "Feed Delivery Test",
       "description": "Opens a menu to send a test message for a random article in a feed, along with the available properties and placeholders for various customizations. You may add `simple` as a parameter to exclude the test details."
@@ -154,6 +157,7 @@
       "noFeeds": "You cannot set up user alerts if you have not added any feeds.",
       "info": "This command adds users for direct messaging (instead of posting such alerts to the feed's channel by default) when there are any warnings or alerts concerning feeds, such as feed limit changes or feed failures. **The user you're adding or removing will be notified.** The correct syntaxes are:\n\n`{{prefix}}alert add <user id/mention>` - Add a user to alerted.\n`{{prefix}}alert remove <user id/mention>` - Remove a user currently receiving alerts\n`{{prefix}}alert list` - Show all users currently receiving alerts",
       "notFound": "The user {{user}} was not found in this server.",
+      "everyoneNotAllowed": "`@everyone` and `@here` are not allowed. Users must be added individually.",
       "alreadyEnabled": "That user is already enabled for direct messaging feed warnings/failures in this server.",
       "successDM": "At the request of {{member}}, you will now be notified of any warnings/failures of feeds in the server `{{guildName}}` (ID `{{guildID}}`).",
       "success": "Successfully enabled user {{member}} for direct messaging feed warnings/failures. The user has been notified of this change.",
@@ -304,14 +308,13 @@
       "removedAllSuccess": "All feed filters have been successfully removed from <{{link}}>.",
       "noFilters": "There are no filters assigned to {{link}}.",
       "noFiltersTryAgain": "There are no filters assigned to {{link}}. Select another option, or type `exit` to cancel.",
-      "listFilters": "List of Assigned Filters",
-      "listFiltersDescription": "**Feed Title:** {{title}}\n**Feed Link:** {{link}}\n\nBelow are the filter categories with their words/phrases under each.\u200b\n\u200b\n",
+      "listFiltersDescription": "Below are the filter categories with their words/phrases under each for the feed <{{link}}> in the channel {{channel}}.",
       "connectionFailureLimit": "Unable to send article since failure limit has been reached (see {{prefix}}list for more information). Select another option, or type `exit` to cancel.",
       "noArticlesPassed": "No articles were able to pass this feed's filters."
     },
     "help": {
       "controlPanelLink": "Be sure to check out your control panel at {{url}} for easy feed management!",
-      "description": "Arguments for commands are added after the command. For example: `{{prefix}}test simple`. Do not include `<` or `>` in the arguments.",
+      "description": "Arguments for commands are added after the command. For example: `{{prefix}}test simple`.\n\n**Argument Definitions**\n`a` = Directly add `a`\n`[a]` = Optionally add `a`\n`(a|b)` = Directly input `a` OR `b`\n`<a>` = Replace `a` with relevant content",
       "arguments": "Arguments",
       "support": "\nSupport can be found at https://discord.gg/pudv7Rx",
       "checkDM": "Check your direct messages!"
@@ -327,7 +330,7 @@
       "statusFailed": "Status: FAILED\n",
       "statusOk": "Status: OK {{failCount}}\n",
       "serverLimit": "Server Limit",
-      "failAlert": "**Attention!** Feeds that have reached {{failLimit}} connection failure limit have been detected. They will no longer be retried until the bot instance is restarted. Please either remove, or use **{{prefix}}refresh** to try to reset its status.\u200b\n\u200b\n",
+      "failAlert": "**Attention!** Feeds that have reached connection failure limit have been detected. They will no longer be retried. Please either remove, or use **{{prefix}}refresh** to try and reset its status.",
       "feedList": "Feed List",
       "feedListChannel": "Feed List in Channel #{{channel}}",
       "refreshRate": "Refresh Rate",
@@ -366,7 +369,7 @@
       "listSubscribersDescription": "Below are the subscribers of the feed <{{link}}> in channel {{channel}}.",
       "listSubscribersNone": "There are no subscribers for the feed <{{link}}> in channel {{channel}}.",
       "removeAllSubscribersSuccess": "All subscribers have been successfully removed from feed <{{link}}>.",
-      "addSubscriberExists": "Unable to add subscriber. {{type}} {{mention}} is already subscribed to this feed.",
+      "addSubscriberExists": "Unable to add subscriber, {{type}} {{mention}} is already subscribed to this feed.",
       "addSubscriberSuccess": "Subscriber {{type}} {{mention}} successfully added to feed <{{link}}>.",
       "notFeedSubscriber": "This role or user is not subscribed to the feed <{{link}}>. Try again, or type `exit` to cancel.",
       "removeSubscriberSuccess": "Successfully removed the subscriber {{mention}} from the feed <{{link}}>.",
@@ -376,11 +379,11 @@
         "title": "Subscriber Filters Customization",
         "description": "**Feed URL:** {{link}}\n\nAdding filters to a subscriber will cause it to only get mentioned within the `{suscribers}` placeholder of an article if its filters pass the article.",
         "notSubscriber": "This role or user is not a subscriber. Try again, or type `exit` to cancel.",
-        "optionAddFilter": "Add filter(s) to a subscriber",
-        "optionRemoveFilter": "Remove filter(s) from a subscriber",
-        "optionRemoveAllFilters": "Remove all filters from a subscriber",
-        "optionListFilters": "List all filters of a subscriber",
-        "listFiltersDescription": "**Feed Title:** {{title}}\n**Feed Link:** {{link}}\n**Subscriber:** {{subscriber}}\n\nBelow are the filter categories with their words/phrases under each.\u200b\n\u200b\n",
+        "optionAddFilter": "Add filter(s) to the subscriber",
+        "optionRemoveFilter": "Remove filter(s) from the subscriber",
+        "optionRemoveAllFilters": "Remove all filters from the subscriber",
+        "optionListFilters": "List all filters of the subscriber",
+        "listFiltersDescription": "Below are the filter categories with their words/phrases under each for the feed <{{link}}> within the channel {{channel}} for the subscriber {{subscriber}}.",
         "listNoFilters": "There are no filters assigned to {{subscriber}} for the feed <{{link}}>.",
         "removedAllFilters": "Successfully removed all filters from subscriber {{subscriber}} for feed <{{link}}>"
       }
@@ -487,7 +490,8 @@
     "test": {
       "failed": "Unable to grab a random article because this feed's current status is failed. See {{prefix}}list for more information.",
       "grabbingRandom": "Grabbing a random feed article...",
-      "noArticles": "There are no articles in this feed to send."
+      "noArticles": "There are no articles in this feed to send.",
+      "noValidLatest": "There are either no articles in this feed, or there are articles with invalid dates and the latest one cannot be reliably determined."
     },
     "webhook": {
       "existingFound": "An existing webhook was found ({{webhookMention}}). You may type `{remove}` to disconnect the existing webhook, or continue and your new setting will overwrite the existing one.\n\n",
@@ -512,12 +516,26 @@
       "noSubscribedFeedsList": "You are not being mentioned in any feeds.",
       "noEligible": "There are either no feeds with subscribed roles, or no eligible subscribed roles that can be self-added.",
       "invalidRole": "That is an invalid role. Try again, or type `exit` to cancel.",
-      "listInputRole": "Above is the list of feeds, their channels, and eligible roles that you may add to yourself. Type the role name to add the role to yourself, or type `exit` to cancel.",
+      "listInputRole": "Below is the list of feeds, their channels, and eligible roles that you may add to yourself. Type the role name or mention to add the role to yourself, or type `exit` to cancel.",
       "addSuccess": "You now have the role `{{name}}`, subscribed to:",
       "directSubscribeExists": "Unable to directly subscribe to feed <{{link}}>. You are already subscribed to it.",
       "directSubscribeSuccess": "You are now directly subscribed to the feed <{{link}}>.",
       "alreadyHaveRole": "You already have this role. Try another role name, or type `exit` to cancel.",
-      "directSubscriberDisabled": "The feed <{{link}}> in {{channel}} does not allow direct subscribers. It must be enabled in the `{{prefix}}options` command. Try another feed, or type `exit` to cancel."
+      "directSubscriberDisabled": "The feed <{{link}}> in {{channel}} does not allow direct subscribers. It must be enabled in the `{{prefix}}options` command. Try another feed, or type `exit` to cancel.",
+      "filters": {
+        "description": "Manage filters for your subscription. You may use filters to determine what articles within the feed {{link}} you want to be mentioned in.",
+        "noSubscribedFeeds": "You are not directly subscribed to any feeds.",
+        "optionAddFilters": "Add filter(s)",
+        "optionAddFiltersDescription": "Add new filter(s) to myself so I only get mentioned in certain articles.",
+        "optionRemoveFilters": "Remove filter(s)",
+        "optionRemoveFiltersDescription": "Remove existing filter(s) from myself, if any.",
+        "optionRemoveAllFilters": "Remove all filter(s)",
+        "optionRemoveAllFiltersDescription": "Remove all filter(s) from myself, if any.",
+        "optionListFilters": "List existing filter(s)",
+        "optionListFiltersDescription": "List my filters in all categories, if any.",
+        "optionSendFilteredArticle": "Send a filtered article that mentions you",
+        "optionSendFilteredArticleDescription": "Send a random article that will mention you, taking your filters (if they exist) into account."
+      }
     },
     "unsub": {
       "optionRemoveRole": "I want to remove a mentioned role from myself",
@@ -531,7 +549,7 @@
       "invalidRole": "That is not a valid role to remove. Try again, or type `exit` to cancel.",
       "title": "Self-Subscription Removal",
       "directRemoveList": "Below are all the feeds you are directly mentioned in.",
-      "listInputRole": "Above is the list of feeds, their channels, and eligible roles that you may remove from yourself. Type the role name to remove it, or type `exit` to cancel.",
+      "listInputRole": "Below is the list of feeds, their channels, and eligible roles that you may remove from yourself. Type the role name or mention to remove it, or type `exit` to cancel.",
       "roleRemoveSuccess": "You no longer have the role {{role}}.",
       "directRemoveSuccess": "You will now no longer be directly mentioned for the feed <{{link}}>.",
       "removeAllSuccess": "You will now no longer be directly mentioned or mentioned through roles for any feed."
@@ -579,7 +597,7 @@
       "feedSelectionMenu": "Feed Selection Menu",
       "action": "Action",
       "prompt": "Choose a feed to from this channel by typing the number to execute your requested action on.",
-      "multiSelect": "You may select multiple feeds by separation with commas (for example `1,3,8`).",
+      "multiSelect": "You may select multiple feeds by separation with commas (for example `1,3,8`), or with a range (for example `1-3,5,7-9`).",
       "exitToCancel": "Type `exit` to cancel."
     },
     "errors": {

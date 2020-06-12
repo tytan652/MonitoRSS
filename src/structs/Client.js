@@ -9,30 +9,36 @@ const ArticleMessage = require('./ArticleMessage.js')
 const Feed = require('./db/Feed.js')
 const FeedData = require('./FeedData.js')
 const ArticleMessageRateLimiter = require('./ArticleMessageRateLimiter.js')
-const initialize = require('../util/initialization.js')
+const initialize = require('../initialization/index.js')
 const getConfig = require('../config.js').get
 const createLogger = require('../util/logger/create.js')
 const connectDb = require('../util/connectDatabase.js')
 const { once } = require('events')
+const devLevels = require('../util/devLevels.js')
+const dumpHeap = require('../util/dumpHeap.js')
 
-const DISABLED_EVENTS = [
-  'TYPING_START',
-  'MESSAGE_DELETE',
-  'MESSAGE_UPDATE',
-  'PRESENCE_UPDATE',
-  'VOICE_STATE_UPDATE',
-  'VOICE_SERVER_UPDATE',
-  'USER_NOTE_UPDATE',
-  'CHANNEL_PINS_UPDATE'
-]
 const STATES = {
   STOPPED: 'STOPPED',
   STARTING: 'STARTING',
   READY: 'READY'
 }
+/**
+ * @type {import('discord.js').ClientOptions}
+ */
 const CLIENT_OPTIONS = {
-  disabledEvents: DISABLED_EVENTS,
-  messageCacheMaxSize: 100
+  /**
+   * Allow minimal caching for message reactions/pagination
+   * handling. After 10 messages after the initial
+   * paginated embed, the pagination will stop working
+   */
+  messageCacheMaxSize: 10,
+  ws: {
+    intents: [
+      'GUILDS',
+      'GUILD_MESSAGES',
+      'GUILD_MESSAGE_REACTIONS'
+    ]
+  }
 }
 
 class Client extends EventEmitter {
@@ -65,14 +71,8 @@ class Client extends EventEmitter {
         this._setup()
       }
     } catch (err) {
-      if (err.message.includes('too many guilds')) {
-        throw err
-      } else {
-        this.log.warn({
-          error: err
-        }, 'Discord.RSS failed to start, retrying in 10 minutes')
-        setTimeout(() => this.login.bind(this)(token), 600000)
-      }
+      this.log.error(err, 'Discord.RSS failed to start')
+      ipc.send(ipc.TYPES.KILL)
     }
   }
 
@@ -93,6 +93,7 @@ class Client extends EventEmitter {
         this.stop()
       }
     })
+    bot.on('debug', info => this.log.debug(info))
     bot.on('resume', () => {
       this.log.info('Websocket resumed')
       this.start()
@@ -107,11 +108,23 @@ class Client extends EventEmitter {
         this.stop()
       }
     })
+    if (devLevels.dumpHeap()) {
+      this.setupHeapDumps()
+    }
     this.log.info(`Discord.RSS has logged in as "${bot.user.username}" (ID ${bot.user.id})`)
     ipc.send(ipc.TYPES.SHARD_READY, {
       guildIds: bot.guilds.cache.keyArray(),
       channelIds: bot.channels.cache.keyArray()
     })
+  }
+
+  setupHeapDumps () {
+    // Every 10 minutes
+    const prefix = `s${this.bot.shard.ids[0]}`
+    dumpHeap(prefix)
+    setInterval(() => {
+      dumpHeap(prefix)
+    }, 1000 * 60 * 15)
   }
 
   listenToShardedEvents (bot) {
@@ -155,10 +168,6 @@ class Client extends EventEmitter {
   }
 
   async onNewArticle (newArticle, debug) {
-    const config = getConfig()
-    if (config.dev === true) {
-      return
-    }
     const { article, feedObject } = newArticle
     const channel = this.bot.channels.cache.get(feedObject.channel)
     try {
@@ -212,10 +221,6 @@ class Client extends EventEmitter {
   }
 
   async sendUserAlert (channelID, message) {
-    const config = getConfig()
-    if (config.dev === true) {
-      return
-    }
     const fetchedChannel = this.bot.channels.cache.get(channelID)
     if (!fetchedChannel) {
       return
@@ -228,7 +233,7 @@ class Client extends EventEmitter {
       }
       const alertTo = profile.alert
       for (const id of alertTo) {
-        const user = this.bot.users.cache.get(id)
+        const user = await this.bot.users.fetch(id, false)
         if (user) {
           await user.send(alertMessage)
         }
@@ -257,9 +262,6 @@ class Client extends EventEmitter {
       this.log.info(`Database URI detected as a ${uri.startsWith('mongo') ? 'MongoDB URI' : 'folder URI'}`)
       await maintenance.pruneWithBot(this.bot)
       this.state = STATES.READY
-      if (config.bot.enableCommands) {
-        await listeners.enableCommands(this.bot)
-      }
       await initialize.setupRateLimiters(this.bot)
       this.log.info(`Commands have been ${config.bot.enableCommands ? 'enabled' : 'disabled'}.`)
       ipc.send(ipc.TYPES.INIT_COMPLETE)

@@ -17,7 +17,7 @@ const createLogger = require('../../../util/logger/create.js')
 function inputRoleVisual (data) {
   const { profile, feeds, subscribers } = data
   const translate = Translator.createProfileTranslator(profile)
-  let output = ''
+  let output = translate('commands.sub.listInputRole') + '\n'
   for (let i = 0; i < feeds.length; ++i) {
     const feed = feeds[i]
     const feedSubscribers = subscribers[i]
@@ -28,9 +28,8 @@ function inputRoleVisual (data) {
     const mentionStrings = feedSubscribers
       .filter(s => s.type === 'role')
       .map(s => `<@&${s.id}>`)
-    output += splitMentionsByNewlines(mentionStrings) + '\n\n'
+    output += splitMentionsByNewlines(mentionStrings) + '\n'
   }
-  output += translate('commands.sub.listInputRole')
   return new MessageVisual(output, {
     split: true
   })
@@ -44,12 +43,15 @@ async function inputRoleFn (message, data) {
   const { client, member, author, guild, content: roleName } = message
   const { subscribers, profile } = data
   const translate = Translator.createProfileTranslator(profile)
+  const mention = message.mentions.roles.first()
   /**
    * Input is a role name with no capitalization requirements
    */
   const subscriberIDs = new Set(subscribers.flat().map(s => s.id))
-  const subscriberRoles = guild.roles.cache.filter(role => subscriberIDs.has(role.id))
-  const matchedRole = subscriberRoles.find(role => role.name.toLowerCase() === roleName.toLowerCase())
+  const subscriberRoles = guild.roles.cache
+    .filter(role => subscriberIDs.has(role.id))
+  const matchedRole = subscriberRoles
+    .find(role => role.name.toLowerCase() === roleName.toLowerCase() || (mention && role.id === mention.id))
   if (!matchedRole) {
     throw new Rejection(translate('commands.sub.invalidRole'))
   }

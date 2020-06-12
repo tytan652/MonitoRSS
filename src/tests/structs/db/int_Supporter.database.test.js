@@ -3,8 +3,8 @@ const config = require('../../../config.js')
 const mongoose = require('mongoose')
 const Supporter = require('../../../structs/db/Supporter.js')
 const Patron = require('../../../structs/db/Patron.js')
-const initialize = require('../../../util/initialization.js')
-const dbName = 'test_int_patrons'
+const initialize = require('../../../initialization/index.js')
+const dbName = 'test_int_supporters'
 const CON_OPTIONS = {
   useNewUrlParser: true,
   useUnifiedTopology: true,

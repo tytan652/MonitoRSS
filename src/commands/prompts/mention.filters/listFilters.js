@@ -1,5 +1,4 @@
 const { MessageVisual } = require('discord.js-prompts')
-const ThemedEmbed = require('../common/utils/ThemedEmbed')
 const LocalizedPrompt = require('../common/utils/LocalizedPrompt.js')
 const Translator = require('../../../structs/Translator.js')
 
@@ -19,31 +18,27 @@ function listFiltersVisual (data) {
   const translate = Translator.createProfileTranslator(profile)
   const subscriberString = subscriber.type === 'role' ? `<@&${subscriber.id}>` : `<@${subscriber.id}>`
   if (!subscriber.hasFilters()) {
-    return new MessageVisual(translate('commands.mention.filters.noFilters', {
+    return new MessageVisual(translate('commands.mention.filters.listNoFilters', {
       link: feed.url,
       subscriber: subscriberString
     }))
   }
-  const embed = new ThemedEmbed({
-    title: translate('commands.mention.filters.title'),
-    description: translate('commands.mention.filters.listFiltersDescription', {
-      title: feed.title,
-      link: feed.url,
-      subscriber: subscriberString
-    })
-  })
 
+  let output = translate('commands.mention.filters.listFiltersDescription', {
+    link: feed.url,
+    subscriber: subscriberString,
+    channel: `<#${feed.channel}>`
+  })
   for (const filterCat in subscriber.filters) {
+    output += `\n\n**${filterCat}**`
     const filterContent = subscriber.filters[filterCat]
-    let value = ''
     filterContent.forEach((filter) => {
-      value += `${filter}\n`
+      output += `\n${filter}`
     })
-    embed.addField(filterCat, value, true)
   }
 
-  return new MessageVisual('', {
-    embed
+  return new MessageVisual(output, {
+    split: true
   })
 }
 

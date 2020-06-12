@@ -14,21 +14,41 @@ const getConfig = require('../../../config.js').get
  * @property {import('../../../structs/db/Profile.js')} [profile]
  * @property {import('../../../structs/db/Feed.js')[]} feeds
  * @property {import('discord.js').TextChannel} [channel]
+ * @property {string} [searchQuery]
  * @property {string} guildID
  */
+
+/**
+ * @param {import('../../../structs/db/Feed.js')[]} feeds
+ * @param {string} query
+ */
+function queryFeeds (feeds, query) {
+  if (!query) {
+    return feeds
+  }
+  return feeds.filter(feed => {
+    for (const key in feed) {
+      const value = feed[key]
+      if (typeof value === 'string' && value.toLowerCase().includes(query.toLowerCase())) {
+        return true
+      }
+    }
+  })
+}
 
 /**
  * @param {Data} data
  */
 async function listFeedVisual (data) {
-  const { feeds, profile, guildID, channel } = data
+  const { feeds, profile, guildID, channel, searchQuery } = data
   const [supporter, schedules, supporterGuilds] = await Promise.all([
     Supporter.getValidSupporterOfGuild(guildID),
     Schedule.getAll(),
     Supporter.getValidGuilds()
   ])
 
-  const targetFeeds = channel ? feeds.filter(f => f.channel === channel.id) : feeds
+  const unqueriedFeeds = channel ? feeds.filter(f => f.channel === channel.id) : feeds
+  const targetFeeds = queryFeeds(unqueriedFeeds, searchQuery)
   const translate = Translator.createProfileTranslator(profile)
   if (feeds.length === 0) {
     return new MessageVisual(translate('commands.list.noFeeds'))
@@ -65,18 +85,21 @@ async function listFeedVisual (data) {
     vipDetails = '\n'
   }
 
-  const desc = maxFeedsAllowed === 0 ? `${vipDetails}\u200b\n` : `${vipDetails}**${translate('commands.list.serverLimit')}:** ${targetFeeds.length}/${maxFeedsAllowed} [＋](https://www.patreon.com/discordrss)\n\n\u200b`
-  // desc += failedFeedCount > 0 ? translate('commands.list.failAlert', { failLimit: FAIL_LIMIT, prefix: profile && profile.prefix ? profile.prefix : config.bot.prefix }) : ''
+  const desc = maxFeedsAllowed === 0
+    ? `${vipDetails}\u200b\n`
+    : `${vipDetails}**${translate('commands.list.serverLimit')}:** ${targetFeeds.length}/${maxFeedsAllowed} [＋](https://www.patreon.com/discordrss)\n\n\u200b`
 
   const list = new ThemedEmbed()
     .setDescription(desc)
 
+  const countString = targetFeeds.length === feeds.length ? targetFeeds.length : `${targetFeeds.length}/${feeds.length} total`
+
   if (!channel) {
-    list.setAuthor(translate('commands.list.feedList') + ` (${feeds.length})`)
+    list.setAuthor(translate('commands.list.feedList') + ` (${countString})`)
   } else {
     list.setAuthor(translate('commands.list.feedListChannel', {
       channel: channel.name
-    }) + ` (${targetFeeds.length})`)
+    }) + ` (${countString})`)
   }
 
   if (supporter) {
@@ -86,6 +109,7 @@ async function listFeedVisual (data) {
   const menu = new MenuEmbed(list)
     .enablePagination(handlePaginationError)
 
+  let someFailed = false
   targetFeeds.forEach((feed, index) => {
     // URL
     const url = feed.url.length > 500 ? translate('commands.list.exceeds500Characters') : feed.url
@@ -105,10 +129,11 @@ async function listFeedVisual (data) {
       if (!failRecord.hasFailed()) {
         // Determine hours between config spec and now, then calculate health
         const hours = (new Date().getTime() - new Date(failRecord.failedAt).getTime()) / 36e5
-        const health = `(${100 - Math.ceil(hours / FailRecord.cutoff * 100)}% health)`
+        const health = FailRecord.cutoff === 0 ? '(100% health)' : `(${100 - Math.ceil(hours / FailRecord.cutoff * 100)}% health)`
         status = translate('commands.list.statusOk', { failCount: health })
       } else {
         status = translate('commands.list.statusFailed')
+        someFailed = true
       }
     } else {
       status = translate('commands.list.statusOk', { failCount: '(100% health)' })
@@ -143,6 +168,13 @@ async function listFeedVisual (data) {
     const number = feeds.indexOf(feed) + 1
     menu.addOption(name, value, number)
   })
+
+  if (someFailed) {
+    const failAlert = translate('commands.list.failAlert', {
+      prefix: profile && profile.prefix ? profile.prefix : config.bot.prefix
+    })
+    menu.embed.setDescription(`${menu.embed.description}${failAlert}\n\u200b`)
+  }
 
   return new MenuVisual(menu)
 }
